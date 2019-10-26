@@ -4,7 +4,10 @@
 #include <iomanip>
 #include <random>
 static std::mt19937 generator{ std::random_device{}() };
-double func(double x, double y) {
+double bestFIT = 0;
+double AVGfit = 0;
+
+double function(double x, double y) {
     return exp(-pow(x,2))*exp(-pow(y, 2)) / (1+pow(x,2) + pow(y, 2));
 }
 class Genethic {
@@ -21,6 +24,9 @@ public:
     double func() {
         return exp(-pow(x,2))*exp(-pow(y, 2)) / (1+pow(x,2) + pow(y, 2));
     }
+    void print() {
+        std::cout << "X= " << x << "  Y= " << y << "  FIT= " << func() << "\n";
+    }
 };
 Genethic::Genethic() {
     std::uniform_real_distribution<> dist{left_lim, right_lim};
@@ -29,68 +35,74 @@ Genethic::Genethic() {
 
 }
 
-void mutation(std::vector<Genethic>& Cordinates) {
-    std::uniform_real_distribution<> num{-0.1, 0.1};
+void mutation(std::vector<Genethic>& Cordinates, size_t i) {
+    std::uniform_real_distribution<> num{-1, 1};
 
     double delta = num(generator);
-    for(size_t i = 0; i < 2; i++) {
-        Cordinates[i].set_cord(Cordinates[i].get_x() + delta, Cordinates[i].get_y() + delta);
-    }
+    Cordinates[i].set_cord(Cordinates[i].get_x() + delta, Cordinates[i].get_y() + delta);
 }
 
 void crossover(std::vector<Genethic>& Cordinates) {
-    std::vector<Genethic> Cord;
-    Cord.resize(Cordinates.size());
-
-    for (size_t i = 0; i < 4; i++) {
-        for (size_t j = 1; j < 4; j++) {
-            if (Cordinates[j].func() > Cordinates[j - 1].func()) {
-                std::swap(Cordinates[j], Cordinates[j - 1]);
-            }
+    Genethic max1;
+    Genethic max2;
+    max1.set_cord(-100,-100);
+    max2.set_cord(-100,-100);
+    std::uniform_real_distribution<> ran{0, 1};
+    AVGfit = (Cordinates[0].func() + Cordinates[1].func() + Cordinates[2].func() + Cordinates[3].func()) / 4;
+    for (size_t iter = 0; iter  < 4; iter++ ) {
+        if (Cordinates[iter].func() > max1.func() && Cordinates[iter].func() > max2.func()) {
+            max2 = max1;
+            max1 = Cordinates[iter];
+        } else if (Cordinates[iter].func() > max2.func()) {
+            max2 = Cordinates[iter];
         }
     }
+    bestFIT = max1.func();
+    Cordinates[0].set_cord(max1.get_x(), max1.get_y());
+    if(ran(generator) <= 0.25){
+        mutation(Cordinates, 0);
 
-    Cord[0].set_cord(Cordinates[1].get_x(), Cordinates[0].get_y());
-    Cord[1].set_cord(Cordinates[2].get_x(), Cordinates[0].get_y());
-    Cord[2].set_cord(Cordinates[0].get_x(), Cordinates[1].get_y());
-    Cord[3].set_cord(Cordinates[0].get_x(), Cordinates[2].get_y());
-    mutation(Cord);
+    }
+    Cordinates[1].set_cord(max1.get_x(), max2.get_y());
+    if(ran(generator) <= 0.25){
+        mutation(Cordinates, 1);
 
-    for (size_t i = 0; i < 4; i++) {
-        for (size_t j = 1; j < 4; j++) {
-            if (Cord[j].func() > Cord[j - 1].func()) {
-                std::swap(Cord[j], Cord[j - 1]);
-            }
-        }
     }
-    for (int i = 0; i < 4; i++) {
-        Cordinates[i] = Cord[i];
+    Cordinates[2].set_cord(max2.get_x(), max1.get_y());
+    if(ran(generator) <= 0.25){
+        mutation(Cordinates, 2);
+
     }
+    Cordinates[3].set_cord(max2.get_x(), max2.get_y());
+    if(ran(generator) <= 0.25){
+        mutation(Cordinates, 3);
+
+    }
+
+
+
 }
 
 int main()
 {
     Genethic a, b, c, d;
+    size_t populations = 0;
     std::vector<Genethic> Coords;
     Coords.push_back(a);
     Coords.push_back(b);
     Coords.push_back(c);
     Coords.push_back(d);
-    int N = 0;
-    while (N != 30) {
-        double SumOfX = 0;
-        double SumOfY = 0;
-        crossover(Coords);
-        N++;
-        std::cout << std::endl << "Номер популяции :" << N << std::endl;
-        for (int i = 0; i < 4; i++) {
-            std::cout << "x = " << Coords[i].get_x() << " y = " << Coords[i].get_y() << " f = " << Coords[i].func() << std::endl;
-            SumOfX += Coords[i].get_x();
-            SumOfY += Coords[i].get_y();
+    std::cout << "Enter Populations: "; std::cin >> populations;
+    for(size_t iterator = 0; iterator <= populations; iterator++) {
+        std::cout << "Population " << iterator << std::endl;
+        for (size_t jterator = 0; jterator < 4; jterator++) {
+            Coords[jterator].print();
+
         }
-        std::cout << std::endl << "Среднее x = " << SumOfX / 4 << " Среднее y = " << SumOfY / 4 << " f(среднее x, среднее y) = " << func(SumOfX / 4, SumOfY / 4) << std::endl;
+        crossover(Coords);
+        std::cout << "Best FIT: " << bestFIT << "    AVG FIT: " << AVGfit << std::endl;
+        std::cout << std::endl;
     }
-    std::cout << std::endl << "максимум равен F = " << Coords[0].func();
     std::cout << std::endl;
     return 0;
 
