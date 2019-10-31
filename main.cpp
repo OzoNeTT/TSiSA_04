@@ -3,13 +3,11 @@
 #include <string>
 #include <iomanip>
 #include <random>
-static std::mt19937 generator{ std::random_device{}() };
+std::mt19937 generator{ std::random_device{}() };
+
 double bestFIT = 0;
 double AVGfit = 0;
 
-double function(double x, double y) {
-    return exp(-pow(x,2))*exp(-pow(y, 2)) / (1+pow(x,2) + pow(y, 2));
-}
 class Genethic {
 private:
     double x;
@@ -37,50 +35,81 @@ Genethic::Genethic() {
 
 void mutation(std::vector<Genethic>& Cordinates, size_t i) {
     std::uniform_real_distribution<> num{-1, 1};
-
+    std::uniform_real_distribution<> ran{0, 1};
     double delta = num(generator);
-    Cordinates[i].set_cord(Cordinates[i].get_x() + delta, Cordinates[i].get_y() + delta);
+    if(ran(generator) <= 0.5) {
+        Cordinates[i].set_cord(Cordinates[i].get_x() + delta, Cordinates[i].get_y());
+    }
+    else {
+        Cordinates[i].set_cord(Cordinates[i].get_x() , Cordinates[i].get_y() + delta);
+    }
 }
 
 void crossover(std::vector<Genethic>& Cordinates) {
-    Genethic max1;
-    Genethic max2;
-    max1.set_cord(-100,-100);
-    max2.set_cord(-100,-100);
-    std::uniform_real_distribution<> ran{0, 1};
     AVGfit = (Cordinates[0].func() + Cordinates[1].func() + Cordinates[2].func() + Cordinates[3].func()) / 4;
-    for (size_t iter = 0; iter  < 4; iter++ ) {
-        if (Cordinates[iter].func() > max1.func() && Cordinates[iter].func() > max2.func()) {
-            max2 = max1;
-            max1 = Cordinates[iter];
-        } else if (Cordinates[iter].func() > max2.func()) {
-            max2 = Cordinates[iter];
+    std::vector<Genethic> RulletResult;
+    std::vector<Genethic> ChildsAndParents;
+    std::vector<double> RulletIntervals;
+    std::uniform_real_distribution<> ran{0,1};
+    double SumFIT = 0;
+    double randomNumber = 0;
+
+    for(int iterator = 0; iterator < Cordinates.size(); iterator++){
+        SumFIT += Cordinates[iterator].func();
+    }
+    for(int iterator = 0; iterator < Cordinates.size(); iterator++){
+        RulletIntervals.push_back(Cordinates[iterator].func() / SumFIT);
+    }
+    for(int iterator = 1; iterator < RulletIntervals.size(); iterator++){
+        RulletIntervals[iterator] += RulletIntervals[iterator - 1];
+    }
+
+    for(int iter = 0; iter < 2; iter++){
+        randomNumber = ran(generator);
+        if(randomNumber <= RulletIntervals[0]){
+            RulletResult.push_back(Cordinates[0]);
+        }
+        if(randomNumber > RulletIntervals[0] && randomNumber <= RulletIntervals[1]){
+            RulletResult.push_back(Cordinates[1]);
+        }
+        if(randomNumber > RulletIntervals[1] && randomNumber <= RulletIntervals[2]){
+            RulletResult.push_back(Cordinates[2]);
+        }
+        if(randomNumber > RulletIntervals[2] && randomNumber <= RulletIntervals[3]){
+            RulletResult.push_back(Cordinates[3]);
         }
     }
+
+    ChildsAndParents.push_back(RulletResult[0]);
+    ChildsAndParents.push_back(RulletResult[1]);
+
+    Genethic child1; child1.set_cord(RulletResult[0].get_x(), RulletResult[1].get_y());
+    Genethic child2; child2.set_cord(RulletResult[1].get_x(), RulletResult[0].get_y());
+    ChildsAndParents.push_back(child1); ChildsAndParents.push_back(child2);
+
+    Genethic max1;
+    max1.set_cord(-100, -100);
+
+    for (int iterator = 0; iterator < ChildsAndParents.size(); iterator++) {
+        if(ChildsAndParents[iterator].func() > max1.func()) {
+            max1 = ChildsAndParents[iterator];
+        }
+    }
+
     bestFIT = max1.func();
-    Cordinates[0].set_cord(max1.get_x(), max1.get_y());
-    if(ran(generator) <= 0.25){
-        mutation(Cordinates, 0);
 
-    }
-    Cordinates[1].set_cord(max1.get_x(), max2.get_y());
-    if(ran(generator) <= 0.25){
-        mutation(Cordinates, 1);
-
-    }
-    Cordinates[2].set_cord(max2.get_x(), max1.get_y());
-    if(ran(generator) <= 0.25){
-        mutation(Cordinates, 2);
-
-    }
-    Cordinates[3].set_cord(max2.get_x(), max2.get_y());
-    if(ran(generator) <= 0.25){
-        mutation(Cordinates, 3);
-
+    for (int i = 0; i < 4; i++){
+        Cordinates[i] = ChildsAndParents[i];
     }
 
-
-
+    for(int iter = 0; iter < Cordinates.size(); iter++) {
+            if(ran(generator) <= 0.25){
+                mutation(Cordinates, iter);
+            }
+    }
+    RulletResult.clear();
+    ChildsAndParents.clear();
+    RulletIntervals.clear();
 }
 
 int main()
